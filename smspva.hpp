@@ -1,5 +1,5 @@
 #include <string>
-#include "request.hpp"
+#include "request/request.hpp"
 #include "json/json.hpp"
 
 namespace smspva {
@@ -325,81 +325,34 @@ namespace smspva {
 	class smspva {
 	public:
 		smspva(std::string api_key) { this->api_key = api_key; }
-		double get_balance() {
-			auto result = internal::get_request("get_balance", "", "opt4", "", this->api_key, "");
-			if (result == "") { std::cout << "[-] failed to get account balance" << std::endl; }
+
+		std::string generic_call(std::string abort_msg, std::string target, std::string method, std::string country, std::string service, std::string id, std::string operation) {
+			auto result = internal::get_request(method, country, service, id, this->api_key, operation);
+			if (result == "") { std::cout << "[-] failed to " << abort_msg << std::endl; }
 			else if (result == "API KEY not received!") { std::cout << "[-] no api key provided" << std::endl; }
 			else {
-				try { std::string balance = nlohmann::json::parse(result)["balance"]; return strtof(balance.c_str(), 0); }
+				try {
+					nlohmann::json field_value = nlohmann::json::parse(result)[target];
+					std::string result = field_value.dump(1);
+
+					if (result.length() >= 2 && result[0] == '"') { result.pop_back(); result.erase(result.begin()); }
+					return result;
+				}
 				catch (std::exception & ex) { std::cout << "[-] exception: " << ex.what() << std::endl; }
 			}
-			return -1.0;
+			return "-1.0";
 		}
 
-		int get_karma() {
-			auto result = internal::get_request("get_userinfo", "", "opt4", "", this->api_key, "");
-			if (result == "") { std::cout << "[-] failed to get account karma" << std::endl; }
-			else if (result == "API KEY not received!") { std::cout << "[-] no api key provided" << std::endl; }
-			else {
-				try { std::string karma = nlohmann::json::parse(result)["karma"]; return std::stoi(karma.c_str(), 0); }
-				catch (std::exception & ex) { std::cout << "[-] exception: " << ex.what() << std::endl; }
-			}
-			return -1;
-		}
-		int get_available_total(countries::country country, services::service service) {
-			auto result = internal::get_request("get_count_new", countries::get_string(country), services::get_string(service), "", this->api_key, "");
-			if (result == "") { std::cout << "[-] failed to get total available numbers" << std::endl; }
-			else if (result == "API KEY not received!") { std::cout << "[-] no api key provided" << std::endl; }
-			else {
-				try { return nlohmann::json::parse(result)["total"]; }
-				catch (std::exception & ex) { std::cout << "[-] exception: " << ex.what() << std::endl; }
-			}
-			return -1;
-		}
-
-		int get_available_now(countries::country country, services::service service) {
-			auto result = internal::get_request("get_count_new", countries::get_string(country), services::get_string(service), "", this->api_key, "");
-			if (result == "") { std::cout << "[-] failed to get now available numbers" << std::endl; }
-			else if (result == "API KEY not received!") { std::cout << "[-] no api key provided" << std::endl; }
-			else {
-				try { return nlohmann::json::parse(result)["online"]; }
-				catch (std::exception & ex) { std::cout << "[-] exception: " << ex.what() << std::endl; }
-			}
-			return -1;
-		}
-
-		int get_available_call_total(countries::country country, services::service service) {
-			auto result = internal::get_request("get_count_new", countries::get_string(country), services::get_string(service), "", this->api_key, "");
-			if (result == "") { std::cout << "[-] failed to get total available numbers for call forwarding" << std::endl; }
-			else if (result == "API KEY not received!") { std::cout << "[-] no api key provided" << std::endl; }
-			else {
-				try { return nlohmann::json::parse(result)["forTotal"]; }
-				catch (std::exception & ex) { std::cout << "[-] exception: " << ex.what() << std::endl; }
-			}
-			return -1;
-		}
-
-		int get_available_call_now(countries::country country, services::service service) {
-			auto result = internal::get_request("get_count_new", countries::get_string(country), services::get_string(service), "", this->api_key, "");
-			if (result == "") { std::cout << "[-] failed to get current available numbers for call forwarding" << std::endl; }
-			else if (result == "API KEY not received!") { std::cout << "[-] no api key provided" << std::endl; }
-			else {
-				try { return nlohmann::json::parse(result)["forOnline"]; }
-				catch (std::exception & ex) { std::cout << "[-] exception: " << ex.what() << std::endl; }
-			}
-			return -1;
-		}
-
-		double get_price(countries::country country, services::service service) {
-			auto result = internal::get_request("get_service_price", countries::get_string(country), services::get_string(service), "", this->api_key, "");
-			if (result == "") { std::cout << "[-] failed to get number price" << std::endl; }
-			else if (result == "API KEY not received!") { std::cout << "[-] no api key provided" << std::endl; }
-			else {
-				try { std::string balance = nlohmann::json::parse(result)["price"]; return strtof(balance.c_str(), 0); }
-				catch (std::exception & ex) { std::cout << "[-] exception: " << ex.what() << std::endl; }
-			}
-			return -1.0;
-		}
+		double get_balance() { return strtof(generic_call("get account balance", "balance", "get_balance", "", "opt4", "", "").c_str(), 0); }
+		int get_karma() { return std::stoi(generic_call("get account karma", "karma", "get_userinfo", "", "opt4", "", "").c_str(), 0); }
+		int get_available_total(countries::country country, services::service service) { return std::stoi(generic_call("get total available numbers", "total", "get_count_new", countries::get_string(country), services::get_string(service), "", "")); }
+		int get_available_now(countries::country country, services::service service) { return std::stoi(generic_call("get now available numbers", "online", "get_count_new", countries::get_string(country), services::get_string(service), "", "")); }
+		int get_available_call_total(countries::country country, services::service service) { return std::stoi(generic_call("get total available numbers for call forwarding", "forTotal", "get_count_new", countries::get_string(country), services::get_string(service), "", "")); }
+		int get_available_call_now(countries::country country, services::service service) { return std::stoi(generic_call("get current available numbers for call forwarding", "forOnline", "get_count_new", countries::get_string(country), services::get_string(service), "", "")); }
+		double get_price(countries::country country, services::service service) { return strtof(generic_call("get number price", "price", "get_service_price", countries::get_string(country), services::get_string(service), "", "").c_str(), 0); }
+		int report_number(number* num) { return std::stoi(generic_call("report number", "id", "ban", "", services::get_string(num->service), "", "")); }
+		int get_code(number* num) { try { return std::stoi(generic_call("get sms", "sms", "get_sms", countries::get_string(num->country), services::get_string(num->service), std::to_string(num->id), "")); } catch (std::exception & ex) { return NULL; } }
+		int cancel_number(number* num) { return std::stoi(generic_call("cancel number", "id", "denial", countries::get_string(num->country), services::get_string(num->service), std::to_string(num->id), "")); }
 
 		number* get_number(countries::country country, services::service service) {
 			auto result = internal::get_request("get_number", countries::get_string(country), services::get_string(service), "", this->api_key, "");
@@ -410,39 +363,6 @@ namespace smspva {
 				catch (std::exception & ex) { std::cout << "[-] exception: " << ex.what() << std::endl; }
 			}
 			return nullptr;
-		}
-
-		int report_number(number* num) {
-			auto result = internal::get_request("ban", "", services::get_string(num->service), "", this->api_key, "");
-			if (result == "") { std::cout << "[-] failed to report number" << std::endl; }
-			else if (result == "API KEY not received!") { std::cout << "[-] no api key provided" << std::endl; }
-			else {
-				try { return nlohmann::json::parse(result)["id"]; }
-				catch (std::exception & ex) { std::cout << "[-] exception: " << ex.what() << std::endl; }
-			}
-			return -1;
-		}
-
-		int get_code(number* num) {
-			auto result = internal::get_request("get_sms", countries::get_string(num->country), services::get_string(num->service), std::to_string(num->id), this->api_key, "");
-			if (result == "") { std::cout << "[-] failed to report number" << std::endl; }
-			else if (result == "API KEY not received!") { std::cout << "[-] no api key provided" << std::endl; }
-			else {
-				try { nlohmann::json target = nlohmann::json::parse(result); if (target["sms"] == nullptr) { return 0; } else { return target["sms"]; } }
-				catch (std::exception & ex) { std::cout << "[-] exception: " << ex.what() << std::endl; }
-			}
-			return -1;
-		}
-
-		int cancel_number(number* num) {
-			auto result = internal::get_request("denial", countries::get_string(num->country), services::get_string(num->service), std::to_string(num->id), this->api_key, "");
-			if (result == "") { std::cout << "[-] failed to cancel number" << std::endl; }
-			else if (result == "API KEY not received!") { std::cout << "[-] no api key provided" << std::endl; }
-			else {
-				try { return nlohmann::json::parse(result)["id"]; }
-				catch (std::exception & ex) { std::cout << "[-] exception: " << ex.what() << std::endl; }
-			}
-			return -1;
 		}
 	private:
 		std::string api_key;
