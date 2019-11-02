@@ -23,6 +23,7 @@ int main() {
 	if (available_now == -1) { std::cout << "[-] failed to get available total numbers" << std::endl; }
 	else { std::cout << "[+] successfully got available numbers now: " << available_now << std::endl; }
 
+	
 	int available_call_total = api.get_available_call_total(smspva::countries::country::country_russian_federation, smspva::services::service::service_whatsapp);
 	if (available_call_total == -1) { std::cout << "[-] failed to get available total numbers for call forwarding" << std::endl; }
 	else { std::cout << "[+] successfully got available total numbers for call forwarding: " << available_call_total << std::endl; }
@@ -45,7 +46,7 @@ int main() {
 
 	int sms = api.get_code(new_num);
 	if (sms == -1) { std::cout << "[-] failed to get sms from number" << std::endl; }
-	else if (sms == 0) { std::cout << "[-] sms not yet received, wait 20s and retry" << std::endl; }
+	else if (sms == NULL) { std::cout << "[-] sms not yet received, wait 20s and retry" << std::endl; }
 	else { std::cout << "[+] successfully received sms with code " << sms << std::endl; }
 
 	int cancel_number = api.cancel_number(new_num);
@@ -53,6 +54,8 @@ int main() {
 	else { std::cout << "[+] successfully cancelled number with id: " << new_num->id << std::endl; }
 
 	delete new_num;
+
+	std::cout << "[+] successfully ran all tests" << std::endl;
 
 	std::this_thread::sleep_for(std::chrono::seconds(1000));
 	return 0;
